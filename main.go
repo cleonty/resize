@@ -5,6 +5,7 @@ import (
 	"image/jpeg"
 	"log"
 	"os"
+	"runtime"
 	"strings"
 	"sync"
 
@@ -14,9 +15,11 @@ import (
 var w = flag.Uint("w", 0, "width")
 var h = flag.Uint("h", 0, "height")
 var wg sync.WaitGroup
+var tokens chan struct{}
 
 func main() {
 	flag.Parse()
+	tokens = make(chan struct{}, runtime.NumCPU())
 	for _, fileName := range flag.Args() {
 		wg.Add(1)
 		go resizeImage(fileName, *w, *h)
@@ -26,6 +29,8 @@ func main() {
 
 func resizeImage(fileName string, w, h uint) {
 	defer wg.Done()
+	tokens <- struct{}{}
+	defer func() { <-tokens }()
 	if !strings.HasSuffix(fileName, ".jpg") && !strings.HasSuffix(fileName, ".jpeg") {
 		log.Printf("resize: %q is not a jpeg file", fileName)
 		return
