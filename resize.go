@@ -63,7 +63,7 @@ func main() {
 	log.Println("done")
 }
 
-func resizeImage(fileName string, w, h uint) error {
+func resizeImage(fileName string, width, height uint) error {
 	if !strings.HasSuffix(fileName, ".jpg") && !strings.HasSuffix(fileName, ".jpeg") {
 		return fmt.Errorf("jpeg file is required")
 	}
@@ -86,7 +86,7 @@ func resizeImage(fileName string, w, h uint) error {
 		return err
 	}
 	file.Close()
-	m := resize.Resize(w, h, img, resize.Lanczos3)
+	m := resize.Resize(width, height, img, resize.Lanczos3)
 	out, err := os.Create(name + "_resized" + ext)
 	if err != nil {
 		return err
