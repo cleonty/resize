@@ -17,15 +17,27 @@ import (
 
 var w = flag.Uint("w", 0, "width")
 var h = flag.Uint("h", 0, "height")
-var wg sync.WaitGroup
-var tokens chan struct{}
 
 func main() {
-	flag.Parse()
-	tokens = make(chan struct{}, runtime.NumCPU())
+	var wg sync.WaitGroup
+	tokens := make(chan struct{}, runtime.NumCPU())
 	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-	go handleInterrupt(cancel)
+	c := make(chan os.Signal, 1)
+	signal.Notify(c, os.Interrupt)
+	flag.Parse()
+
+	defer func() {
+		signal.Stop(c)
+		cancel()
+	}()
+	go func() {
+		select {
+		case <-c:
+			log.Println("Cancelling...")
+			cancel()
+		case <-ctx.Done():
+		}
+	}()
 
 	for _, fileName := range flag.Args() {
 		wg.Add(1)
@@ -82,12 +94,4 @@ func resizeImage(fileName string, w, h uint) error {
 		return err
 	}
 	return nil
-}
-
-func handleInterrupt(cancel context.CancelFunc) {
-	c := make(chan os.Signal, 1)
-	signal.Notify(c, os.Interrupt)
-	<-c
-	log.Println("Cancelling...")
-	cancel()
 }
