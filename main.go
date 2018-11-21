@@ -6,28 +6,26 @@ import (
 	"log"
 	"os"
 	"strings"
+	"sync"
 
 	"github.com/nfnt/resize"
 )
 
 var w = flag.Uint("w", 0, "width")
 var h = flag.Uint("h", 0, "height")
+var wg sync.WaitGroup
 
 func main() {
-	ch := make(chan bool)
 	flag.Parse()
 	for _, arg := range flag.Args() {
-		go resizeImage(arg, *w, *h, ch)
+		wg.Add(1)
+		go resizeImage(arg, *w, *h)
 	}
-	for range flag.Args() {
-		<-ch
-	}
+	wg.Wait()
 }
 
-func resizeImage(arg string, w, h uint, done chan<- bool) {
-	defer func() {
-		done <- true
-	}()
+func resizeImage(arg string, w, h uint) {
+	defer wg.Done()
 	if !strings.HasSuffix(arg, ".jpg") && !strings.HasSuffix(arg, ".jpeg") {
 		log.Printf("resize: %q is not a jpeg file", arg)
 		return
