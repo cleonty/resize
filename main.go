@@ -88,6 +88,6 @@ func handleInterrupt(cancel context.CancelFunc) {
 	c := make(chan os.Signal, 1)
 	signal.Notify(c, os.Interrupt)
 	<-c
-	fmt.Println("Cancelling...")
+	log.Println("Cancelling...")
 	cancel()
 }
