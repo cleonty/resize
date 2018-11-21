@@ -1,10 +1,13 @@
 package main
 
 import (
+	"context"
 	"flag"
+	"fmt"
 	"image/jpeg"
 	"log"
 	"os"
+	"os/signal"
 	"runtime"
 	"strings"
 	"sync"
@@ -20,17 +23,26 @@ var tokens chan struct{}
 func main() {
 	flag.Parse()
 	tokens = make(chan struct{}, runtime.NumCPU())
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	go handleInterrupt(cancel)
+
 	for _, fileName := range flag.Args() {
 		wg.Add(1)
-		go resizeImage(fileName, *w, *h)
+		go resizeImage(ctx, fileName, *w, *h)
 	}
 	wg.Wait()
 }
 
-func resizeImage(fileName string, w, h uint) {
+func resizeImage(ctx context.Context, fileName string, w, h uint) {
 	defer wg.Done()
-	tokens <- struct{}{}
-	defer func() { <-tokens }()
+	select {
+	case tokens <- struct{}{}:
+		defer func() { <-tokens }()
+	case <-ctx.Done():
+		return
+	}
+	log.Printf("resizing %s\n", fileName)
 	if !strings.HasSuffix(fileName, ".jpg") && !strings.HasSuffix(fileName, ".jpeg") {
 		log.Printf("resize: %q is not a jpeg file", fileName)
 		return
@@ -67,4 +79,13 @@ func resizeImage(fileName string, w, h uint) {
 		log.Print(err)
 		return
 	}
+	log.Printf("done resizing %s\n", fileName)
+}
+
+func handleInterrupt(cancel context.CancelFunc) {
+	c := make(chan os.Signal, 1)
+	signal.Notify(c, os.Interrupt)
+	<-c
+	fmt.Println("Cancelling...")
+	cancel()
 }
