@@ -22,6 +22,7 @@ func main() {
 	var wg sync.WaitGroup
 	tokens := make(chan struct{}, runtime.NumCPU())
 	ctx, cancel := context.WithCancel(context.Background())
+	log.SetFlags(log.LstdFlags | log.Lmicroseconds)
 	c := make(chan os.Signal, 1)
 	signal.Notify(c, os.Interrupt)
 	flag.Parse()
@@ -33,7 +34,7 @@ func main() {
 	go func() {
 		select {
 		case <-c:
-			log.Println("Cancelling...")
+			log.Println("cancelling...")
 			cancel()
 		case <-ctx.Done():
 		}
@@ -59,6 +60,7 @@ func main() {
 		}(fileName)
 	}
 	wg.Wait()
+	log.Println("done")
 }
 
 func resizeImage(fileName string, w, h uint) error {
