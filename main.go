@@ -17,30 +17,30 @@ var wg sync.WaitGroup
 
 func main() {
 	flag.Parse()
-	for _, arg := range flag.Args() {
+	for _, fileName := range flag.Args() {
 		wg.Add(1)
-		go resizeImage(arg, *w, *h)
+		go resizeImage(fileName, *w, *h)
 	}
 	wg.Wait()
 }
 
-func resizeImage(arg string, w, h uint) {
+func resizeImage(fileName string, w, h uint) {
 	defer wg.Done()
-	if !strings.HasSuffix(arg, ".jpg") && !strings.HasSuffix(arg, ".jpeg") {
-		log.Printf("resize: %q is not a jpeg file", arg)
+	if !strings.HasSuffix(fileName, ".jpg") && !strings.HasSuffix(fileName, ".jpeg") {
+		log.Printf("resize: %q is not a jpeg file", fileName)
 		return
 	}
 
 	var name, ext string
-	if strings.HasSuffix(arg, ".jpg") {
-		name = strings.TrimSuffix(arg, ".jpg")
+	if strings.HasSuffix(fileName, ".jpg") {
+		name = strings.TrimSuffix(fileName, ".jpg")
 		ext = ".jpg"
 	}
-	if strings.HasSuffix(arg, ".jpeg") {
-		name = strings.TrimSuffix(arg, ".jpeg")
+	if strings.HasSuffix(fileName, ".jpeg") {
+		name = strings.TrimSuffix(fileName, ".jpeg")
 		ext = ".jpeg"
 	}
-	file, err := os.Open(arg)
+	file, err := os.Open(fileName)
 	if err != nil {
 		log.Print(err)
 		return
