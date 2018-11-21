@@ -29,23 +29,29 @@ func main() {
 
 	for _, fileName := range flag.Args() {
 		wg.Add(1)
-		go resizeImage(ctx, fileName, *w, *h)
+		go func(fileName string) {
+			defer wg.Done()
+			select {
+			case tokens <- struct{}{}:
+				defer func() { <-tokens }()
+			case <-ctx.Done():
+				log.Printf("resizing %s: cancelled", fileName)
+				return
+			}
+			err := resizeImage(fileName, *w, *h)
+			if err != nil {
+				log.Printf("resizing %s: %v", fileName, err)
+			} else {
+				log.Printf("resizing %s: ok", fileName)
+			}
+		}(fileName)
 	}
 	wg.Wait()
 }
 
-func resizeImage(ctx context.Context, fileName string, w, h uint) {
-	defer wg.Done()
-	select {
-	case tokens <- struct{}{}:
-		defer func() { <-tokens }()
-	case <-ctx.Done():
-		return
-	}
-	log.Printf("resizing %s\n", fileName)
+func resizeImage(fileName string, w, h uint) error {
 	if !strings.HasSuffix(fileName, ".jpg") && !strings.HasSuffix(fileName, ".jpeg") {
-		log.Printf("resize: %q is not a jpeg file", fileName)
-		return
+		return fmt.Errorf("jpeg file is required")
 	}
 
 	var name, ext string
@@ -59,27 +65,23 @@ func resizeImage(ctx context.Context, fileName string, w, h uint) {
 	}
 	file, err := os.Open(fileName)
 	if err != nil {
-		log.Print(err)
-		return
+		return err
 	}
 	img, err := jpeg.Decode(file)
 	if err != nil {
-		log.Print(err)
-		return
+		return err
 	}
 	file.Close()
 	m := resize.Resize(w, h, img, resize.Lanczos3)
 	out, err := os.Create(name + "_resized" + ext)
 	if err != nil {
-		log.Print(err)
-		return
+		return err
 	}
 	defer out.Close()
 	if err := jpeg.Encode(out, m, nil); err != nil {
-		log.Print(err)
-		return
+		return err
 	}
-	log.Printf("done resizing %s\n", fileName)
+	return nil
 }
 
 func handleInterrupt(cancel context.CancelFunc) {
