@@ -58,5 +58,8 @@ func resizeImage(arg string, w, h uint) {
 		return
 	}
 	defer out.Close()
-	jpeg.Encode(out, m, nil)
+	if err := jpeg.Encode(out, m, nil); err != nil {
+		log.Print(err)
+		return
+	}
 }
