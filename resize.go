@@ -81,11 +81,11 @@ func resizeImage(fileName string, width, height uint) error {
 	if err != nil {
 		return err
 	}
+	defer file.Close()
 	img, err := jpeg.Decode(file)
 	if err != nil {
 		return err
 	}
-	file.Close()
 	m := resize.Resize(width, height, img, resize.Lanczos3)
 	out, err := os.Create(name + "_resized" + ext)
 	if err != nil {
