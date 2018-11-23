@@ -3,7 +3,6 @@ package main
 import (
 	"context"
 	"flag"
-	"fmt"
 	"image/jpeg"
 	"log"
 	"os"
@@ -13,6 +12,7 @@ import (
 	"sync"
 
 	"github.com/nfnt/resize"
+	"github.com/pkg/errors"
 )
 
 var w = flag.Uint("w", 0, "width")
@@ -65,7 +65,7 @@ func main() {
 
 func resizeImage(fileName string, width, height uint) error {
 	if !strings.HasSuffix(fileName, ".jpg") && !strings.HasSuffix(fileName, ".jpeg") {
-		return fmt.Errorf("jpeg file is required")
+		return errors.Errorf("jpeg file is required, %s given", fileName)
 	}
 
 	var name, ext string
@@ -79,21 +79,22 @@ func resizeImage(fileName string, width, height uint) error {
 	}
 	file, err := os.Open(fileName)
 	if err != nil {
-		return err
+		return errors.WithMessage(err, "unable to open source jpeg file "+fileName)
 	}
 	defer file.Close()
 	img, err := jpeg.Decode(file)
 	if err != nil {
-		return err
+		return errors.WithMessage(err, "unable to decode source jpeg file "+fileName)
 	}
 	m := resize.Resize(width, height, img, resize.Lanczos3)
-	out, err := os.Create(name + "_resized" + ext)
+	resizedFileName := name + "_resized" + ext
+	out, err := os.Create(resizedFileName)
 	if err != nil {
-		return err
+		return errors.WithMessage(err, "unable to create target file "+resizedFileName)
 	}
 	defer out.Close()
 	if err := jpeg.Encode(out, m, nil); err != nil {
-		return err
+		return errors.WithMessage(err, "unable to write into file "+resizedFileName)
 	}
 	return nil
 }
